@@ -5,5 +5,7 @@ CREATE TABLE device (
   name TEXT UNIQUE NOT NULL,
   ip TEXT NOT NULL,
   status BOOLEAN,
-  time TIMESTAMP
+  time TIMESTAMP,
+  error TEXT,
+  coil INT
 );
