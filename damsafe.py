@@ -6,6 +6,8 @@ from datetime import datetime
 
 import click
 import humanize
+from pymodbus.client.sync import ModbusTcpClient
+from pymodbus.exceptions import ConnectionException
 from flask import (
     Flask, render_template, redirect, url_for, request, g, flash
 )
@@ -64,15 +66,13 @@ def dashboard():
             status = '...'
             uptime = '...'
             lastseen = '...'
-        elif db_row['status']:
-            status = 'Up'
-            print(type(db_row['time']))
-            uptime = humanize.naturaldelta(datetime.now() - db_row['time'])
-            lastseen = 'Now'
+        elif db_row['status'] == 1:
+            status = 'up'
+            uptime = str(datetime.now() - db_row['time']).split('.')[0]
+            lastseen = 'now'
         else:
-            status = 'Down'
-            uptime = 'N/A'
-            print(db_row['time'])
+            status = 'down'
+            uptime = 'n/a'
             lastseen = humanize.naturaldelta(datetime.now() - db_row['time'])
 
         device_row = {
@@ -130,7 +130,14 @@ def server_command():
     while True:
         device_rows = db.execute('SELECT * FROM device').fetchall()
         for row in device_rows:
-            print('Pinging {}'.format(row['name']))
+            client = ModbusTcpClient(row['ip'])
+            new_status = True
+            try:
+                client.read_coils(1,1)
+            except ConnectionException:
+                new_status = False
+            print('client {} status: {}'.format(row['name'], new_status))
+            # wait for failure
             new_status = (random.random() > 0.1)
             db.execute('UPDATE device SET status = ? WHERE id = ?', (new_status, row['id']))
             if new_status != row['status']:
