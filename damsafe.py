@@ -52,15 +52,10 @@ def add():
 @app.route('/remove', methods=['POST'])
 def remove():
     db = get_db()
-    print('REMOVING')
-    print([row['name'] for row in db.execute('SELECT * FROM device')])
-    print('going in...')
     with FileLock('db.lock'):
-        print('inside...')
         name = request.form['name']
         db.execute('DELETE FROM device WHERE name = ?', (name,))
         db.commit()
-    print([row['name'] for row in db.execute('SELECT * FROM device')])
     return redirect(url_for('dashboard'))
 
 
@@ -81,8 +76,12 @@ def dashboard():
         else:
             status = 'down'
             uptime = 'n/a'
-            lastseen = humanize.naturaldelta(datetime.now() - db_row['time'])
+            if db_row['time'] is None:
+                lastseen = 'never'
+            else:
+                lastseen = humanize.naturaldelta(datetime.now() - db_row['time'])
 
+        print(db_row['status'])
         device_row = {
             'name':     db_row['name'],
             'ip':       db_row['ip'],
@@ -140,23 +139,22 @@ def server_command():
         for row in device_rows:
             client = ModbusTcpClient(row['ip'])
             new_status = True
-            """
+            print(row['ip'])
             try:
                 result = client.read_coils(1,1)
                 print(result)
             except ConnectionException:
                 new_status = False
-            """
             # print('client {} status: {}'.format(row['name'], new_status))
             # wait for failure
             # new_status = (random.random() > 0.1)
             with FileLock('db.lock'):
                 db.execute('UPDATE device SET status = ? WHERE id = ?', (new_status, row['id']))
-                if new_status != row['status']:
+                if row['status'] is not None and new_status != row['status']:
                     db.execute('UPDATE device SET time = ? WHERE id = ?', (datetime.now(), row['id']))
                 db.commit()
 
-        time.sleep(0.01)  # TODO: make big after stress testing locks
+        time.sleep(5)
 
 
 app.teardown_appcontext(close_db)
