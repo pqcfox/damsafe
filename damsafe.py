@@ -2,10 +2,12 @@ import sqlite3
 
 import click
 from flask import (
-    Flask, render_template, redirect, url_for, request, g
+    Flask, render_template, redirect, url_for, request, g, flash
 )
+from flask.cli import with_appcontext
 
 app = Flask(__name__)
+app.secret_key = 'dev'
 
 @app.route('/')
 def index():
@@ -13,22 +15,41 @@ def index():
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
+    db = get_db()
     if request.method == 'POST':
-        print(request.form['name'])
-        print(request.form['ip'])
+        name = request.form['name']
+        ip = request.form['ip']
 
-        return redirect(request.url)
+        error = None
+        if not name:
+            error = 'Device name is required.'
+        elif not ip:
+            error = 'IP address is required.'
+        elif db.execute(
+            'SELECT id FROM device WHERE name = ?', (name,)
+        ).fetchone() is not None:
+            error = 'Device name is already taken.'
+        if error is None:
+            db.execute(
+                'INSERT INTO device (name, ip) VALUES (?, ?)',
+                (name, ip)
+            )
+            db.commit()
+            return redirect(url_for('dashboard'))
 
-    return render_template('dashboard.html')
+        flash(error)
+    else:
+        g.device_rows = db.execute('SELECT * FROM device').fetchall()
+        return render_template('dashboard.html')
 
 
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(
-            app.config['DATABASE'],
+            'damsafe.sqlite',
             detect_types=sqlite3.PARSE_DECLTYPES
         )
-        g.db.row_factory = sqlite3.ROW
+        g.db.row_factory = sqlite3.Row
 
     return g.db
 

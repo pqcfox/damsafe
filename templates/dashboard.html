@@ -18,15 +18,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th scope="row">1</th>
-          </tr>
-          <tr>
-            <th scope="row">2</th>
-          </tr>
-          <tr>
-            <th scope="row">3</th>
-          </tr>
+          {% for row in g.device_rows %}
+            <tr>
+              <th scope="row">{{ row['id'] }}</th>
+              <td>{{ row['name'] }}</td>
+              <td>{{ row['ip'] }}</td>
+            </tr>
+          {% endfor %}
         </tbody>
       </table>
     </div>
