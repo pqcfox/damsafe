@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 
 import click
 from flask import (
@@ -74,20 +75,33 @@ def close_db(e=None):
         db.close()
 
 
-def init_db():
-    db = get_db()
-
-    with app.open_resource('schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
-
-
 @click.command('init-db')
 @with_appcontext
 def init_db_command():
     """Clear the existing data and create new tables."""
-    init_db()
+    db = get_db()
+    with app.open_resource('schema.sql') as f:
+        db.executescript(f.read().decode('utf8'))
     click.echo('Initialized database.')
+
+
+def modbus_daemon(db):
+    while True:
+        device_rows = db.execute('SELECT * FROM device').fetchall()
+        for row in device_rows:
+            db.commit()
+        time.sleep(5)
+
+
+@click.command('init-daemon')
+@with_appcontext
+def init_daemon_command():
+    """Run the modbus daemon."""
+    db = get_db()
+    daemon_thread = threading.Thread(target=modbus_daemon, args=(db,))
+    daemon_thread.start()
 
 
 app.teardown_appcontext(close_db)
 app.cli.add_command(init_db_command)
+app.cli.add_command(init_daemon_command)
