@@ -15,21 +15,25 @@
             <th scope="col">IP</th>
             <th scope="col">Status</th>
             <th scope="col">Uptime</th>
+            <th scope="col"></th>
           </tr>
         </thead>
         <tbody>
           {% for row in g.device_rows %}
             <tr>
-              <th scope="row">{{ row['id'] }}</th>
-              <td>{{ row['name'] }}</td>
-              <td>{{ row['ip'] }}</td>
+              <th scope="row py-3">{{ row['id'] }}</th>
+              <td class="py-3">{{ row['name'] }}</td>
+              <td class="py-3">{{ row['ip'] }}</td>
+              <td class="py-3">N/A</td>
+              <td class="py-3">N/A</td>
+              <td><form action="{{ url_for('remove') }}" method="post"><button name="id" type="submit" value="{{ row['id'] }}" class="btn btn-primary">Remove</button></form></td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
     <div class="py-3">
-      <form action="" method="post">
+      <form action="{{ url_for('add') }}" method="post">
         <div class="form-row align-items-center">
           <div class="col-auto">
             <label class="sr-only" for="inlineFormInput">Device Name</label>

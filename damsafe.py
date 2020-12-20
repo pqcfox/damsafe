@@ -13,34 +13,47 @@ app.secret_key = 'dev'
 def index():
     return redirect(url_for('dashboard'))
 
-@app.route('/dashboard', methods=['GET', 'POST'])
+@app.route('/add', methods=['POST'])
+def add():
+    db = get_db()
+    name = request.form['name']
+    ip = request.form['ip']
+
+    error = None
+    if not name:
+        error = 'Device name is required.'
+    elif not ip:
+        error = 'IP address is required.'
+    elif db.execute(
+        'SELECT id FROM device WHERE name = ?', (name,)
+    ).fetchone() is not None:
+        error = 'Device name is already taken.'
+    if error is None:
+        db.execute(
+            'INSERT INTO device (name, ip) VALUES (?, ?)',
+            (name, ip)
+        )
+        db.commit()
+        return redirect(url_for('dashboard'))
+
+    flash(error)
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/remove', methods=['POST'])
+def remove():
+    db = get_db()
+    device_id = request.form['id']
+    db.execute('DELETE FROM device WHERE id = ?', (device_id,))
+    db.commit()
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/dashboard', methods=['GET'])
 def dashboard():
     db = get_db()
-    if request.method == 'POST':
-        name = request.form['name']
-        ip = request.form['ip']
-
-        error = None
-        if not name:
-            error = 'Device name is required.'
-        elif not ip:
-            error = 'IP address is required.'
-        elif db.execute(
-            'SELECT id FROM device WHERE name = ?', (name,)
-        ).fetchone() is not None:
-            error = 'Device name is already taken.'
-        if error is None:
-            db.execute(
-                'INSERT INTO device (name, ip) VALUES (?, ?)',
-                (name, ip)
-            )
-            db.commit()
-            return redirect(url_for('dashboard'))
-
-        flash(error)
-    else:
-        g.device_rows = db.execute('SELECT * FROM device').fetchall()
-        return render_template('dashboard.html')
+    g.device_rows = db.execute('SELECT * FROM device').fetchall()
+    return render_template('dashboard.html')
 
 
 def get_db():
