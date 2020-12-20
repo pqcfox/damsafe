@@ -8,6 +8,7 @@ import click
 import humanize
 from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.exceptions import ConnectionException
+from pymodbus.pdu import ModbusExceptions
 from filelock import FileLock
 from flask import (
     Flask, render_template, redirect, url_for, request, g, flash
