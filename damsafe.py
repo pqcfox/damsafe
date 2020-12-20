@@ -8,6 +8,7 @@ import click
 import humanize
 from pymodbus.client.sync import ModbusTcpClient
 from pymodbus.exceptions import ConnectionException
+from filelock import FileLock
 from flask import (
     Flask, render_template, redirect, url_for, request, g, flash
 )
@@ -36,11 +37,12 @@ def add():
     ).fetchone() is not None:
         error = 'Device name is already taken.'
     if error is None:
-        db.execute(
-            'INSERT INTO device (name, ip, status, time) VALUES (?, ?, NULL, NULL)',
-            (name, ip)
-        )
-        db.commit()
+        with FileLock('db.lock'):
+            db.execute(
+                'INSERT INTO device (name, ip, status, time) VALUES (?, ?, NULL, NULL)',
+                (name, ip)
+            )
+            db.commit()
         return redirect(url_for('dashboard'))
 
     flash(error)
@@ -50,9 +52,15 @@ def add():
 @app.route('/remove', methods=['POST'])
 def remove():
     db = get_db()
-    device_id = request.form['id']
-    db.execute('DELETE FROM device WHERE id = ?', (device_id,))
-    db.commit()
+    print('REMOVING')
+    print([row['name'] for row in db.execute('SELECT * FROM device')])
+    print('going in...')
+    with FileLock('db.lock'):
+        print('inside...')
+        name = request.form['name']
+        db.execute('DELETE FROM device WHERE name = ?', (name,))
+        db.commit()
+    print([row['name'] for row in db.execute('SELECT * FROM device')])
     return redirect(url_for('dashboard'))
 
 
@@ -132,18 +140,23 @@ def server_command():
         for row in device_rows:
             client = ModbusTcpClient(row['ip'])
             new_status = True
+            """
             try:
-                client.read_coils(1,1)
+                result = client.read_coils(1,1)
+                print(result)
             except ConnectionException:
                 new_status = False
-            print('client {} status: {}'.format(row['name'], new_status))
+            """
+            # print('client {} status: {}'.format(row['name'], new_status))
             # wait for failure
-            new_status = (random.random() > 0.1)
-            db.execute('UPDATE device SET status = ? WHERE id = ?', (new_status, row['id']))
-            if new_status != row['status']:
-                db.execute('UPDATE device SET time = ? WHERE id = ?', (datetime.now(), row['id']))
-            db.commit()
-        time.sleep(5)
+            # new_status = (random.random() > 0.1)
+            with FileLock('db.lock'):
+                db.execute('UPDATE device SET status = ? WHERE id = ?', (new_status, row['id']))
+                if new_status != row['status']:
+                    db.execute('UPDATE device SET time = ? WHERE id = ?', (datetime.now(), row['id']))
+                db.commit()
+
+        time.sleep(0.01)  # TODO: make big after stress testing locks
 
 
 app.teardown_appcontext(close_db)

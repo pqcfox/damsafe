@@ -28,7 +28,11 @@
               <td class="py-3">{{ row['status'] }}</td>
               <td class="py-3">{{ row['uptime'] }}</td>
               <td class="py-3">{{ row['lastseen'] }}</td>
-              <td><form action="{{ url_for('remove') }}" method="post"><button name="id" type="submit" value="{{ row['id'] }}" class="btn btn-primary">Remove</button></form></td>
+              <td>
+                <form action="{{ url_for('remove') }}" method="post">
+                    <button name="name" type="submit" value="{{ row['name'] }}" class="btn btn-primary">Remove</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
