@@ -1,7 +1,11 @@
+import random
 import sqlite3
 import threading
+import time
+from datetime import datetime
 
 import click
+import humanize
 from flask import (
     Flask, render_template, redirect, url_for, request, g, flash
 )
@@ -31,7 +35,7 @@ def add():
         error = 'Device name is already taken.'
     if error is None:
         db.execute(
-            'INSERT INTO device (name, ip) VALUES (?, ?)',
+            'INSERT INTO device (name, ip, status, time) VALUES (?, ?, NULL, NULL)',
             (name, ip)
         )
         db.commit()
@@ -53,7 +57,33 @@ def remove():
 @app.route('/dashboard', methods=['GET'])
 def dashboard():
     db = get_db()
-    g.device_rows = db.execute('SELECT * FROM device').fetchall()
+    db_rows = db.execute('SELECT * FROM device').fetchall()
+    g.device_rows = []
+    for db_row in db_rows:
+        if db_row['status'] is None:
+            status = '...'
+            uptime = '...'
+            lastseen = '...'
+        elif db_row['status']:
+            status = 'Up'
+            print(type(db_row['time']))
+            uptime = humanize.naturaldelta(datetime.now() - db_row['time'])
+            lastseen = 'Now'
+        else:
+            status = 'Down'
+            uptime = 'N/A'
+            print(db_row['time'])
+            lastseen = humanize.naturaldelta(datetime.now() - db_row['time'])
+
+        device_row = {
+            'name':     db_row['name'],
+            'ip':       db_row['ip'],
+            'status':   status,
+            'uptime':   uptime,
+            'lastseen': lastseen
+        }
+        g.device_rows.append(device_row)
+
     return render_template('dashboard.html')
 
 
@@ -61,7 +91,8 @@ def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(
             'damsafe.sqlite',
-            detect_types=sqlite3.PARSE_DECLTYPES
+            detect_types=(sqlite3.PARSE_DECLTYPES |
+                          sqlite3.PARSE_COLNAMES)
         )
         g.db.row_factory = sqlite3.Row
 
@@ -85,23 +116,29 @@ def init_db_command():
     click.echo('Initialized database.')
 
 
-def modbus_daemon(db):
+@click.command('server')
+@with_appcontext
+def server_command():
+    """Run the modbus server."""
+    db = sqlite3.connect(
+        'damsafe.sqlite',
+        detect_types=(sqlite3.PARSE_DECLTYPES |
+                      sqlite3.PARSE_COLNAMES)
+    )
+    db.row_factory = sqlite3.Row
+
     while True:
         device_rows = db.execute('SELECT * FROM device').fetchall()
         for row in device_rows:
+            print('Pinging {}'.format(row['name']))
+            new_status = (random.random() > 0.1)
+            db.execute('UPDATE device SET status = ? WHERE id = ?', (new_status, row['id']))
+            if new_status != row['status']:
+                db.execute('UPDATE device SET time = ? WHERE id = ?', (datetime.now(), row['id']))
             db.commit()
         time.sleep(5)
 
 
-@click.command('init-daemon')
-@with_appcontext
-def init_daemon_command():
-    """Run the modbus daemon."""
-    db = get_db()
-    daemon_thread = threading.Thread(target=modbus_daemon, args=(db,))
-    daemon_thread.start()
-
-
 app.teardown_appcontext(close_db)
 app.cli.add_command(init_db_command)
-app.cli.add_command(init_daemon_command)
+app.cli.add_command(server_command)
