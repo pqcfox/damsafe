@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 *.sqlite
+db.lock
+server_alive
