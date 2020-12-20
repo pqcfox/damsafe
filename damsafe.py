@@ -1,8 +1,10 @@
 import random
 import sqlite3
 import threading
+import os
 import time
 from datetime import datetime
+from pathlib import Path
 
 import click
 import humanize
@@ -100,6 +102,13 @@ def data():
         }
         g.device_rows.append(device_row)
 
+    try:
+        mtime = os.path.getmtime('server_alive')
+        alive = (time.time() - mtime < 10)
+    except FileNotFoundError:
+        alive = False
+    g.server_status = 'Alive' if alive else 'Dead'
+
     return render_template('data.html')
 
 
@@ -149,6 +158,7 @@ def server_command():
     db.row_factory = sqlite3.Row
 
     while True:
+        Path('server_alive').touch()
         device_rows = db.execute('SELECT * FROM device').fetchall()
         for row in device_rows:
             client = ModbusTcpClient(row['ip'])

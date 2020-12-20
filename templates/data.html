@@ -1,35 +1,40 @@
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th scope="col">#</th>
-      <th scope="col">Device Name</th>
-      <th scope="col">IP</th>
-      <th scope="col">Coil</th>
-      <th scope="col">Status</th>
-      <th scope="col">Error</th>
-      <th scope="col">Uptime</th>
-      <th scope="col">Last Seen</th>
-      <th scope="col"></th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for row in g.device_rows %}
-    <tr>
-      <th scope="row py-3">{{ loop.index }}</th>
-      <td class="py-3">{{ row['name'] }}</td>
-      <td class="py-3">{{ row['ip'] }}</td>
-      <td class="py-3">{{ row['coil'] }}</td>
-      <td class="py-3">{{ row['status'] }}</td>
-      <td class="py-3">{{ row['error'] }}</td>
-      <td class="py-3">{{ row['uptime'] }}</td>
-      <td class="py-3">{{ row['lastseen'] }}</td>
-      <td>
-        <form action="{{ url_for('remove') }}" method="post">
-          <button name="name" type="submit" value="{{ row['name'] }}" class="btn btn-primary">Remove</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="d-flex justify-content-center">
+    <p class="font-weight-light">Server status: <span class="font-weight-bold">{{ g.server_status }}</span></p>
+</div>
 
+<div class="py-3 d-flex justify-content-center">
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Device Name</th>
+        <th scope="col">IP</th>
+        <th scope="col">Coil</th>
+        <th scope="col">Status</th>
+        <th scope="col">Error</th>
+        <th scope="col">Uptime</th>
+        <th scope="col">Last Seen</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in g.device_rows %}
+      <tr>
+        <th scope="row py-3">{{ loop.index }}</th>
+        <td class="py-3">{{ row['name'] }}</td>
+        <td class="py-3">{{ row['ip'] }}</td>
+        <td class="py-3">{{ row['coil'] }}</td>
+        <td class="py-3">{{ row['status'] }}</td>
+        <td class="py-3">{{ row['error'] }}</td>
+        <td class="py-3">{{ row['uptime'] }}</td>
+        <td class="py-3">{{ row['lastseen'] }}</td>
+        <td>
+          <form action="{{ url_for('remove') }}" method="post">
+            <button name="name" type="submit" value="{{ row['name'] }}" class="btn btn-primary">Remove</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
