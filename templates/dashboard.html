@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+  <div class="container">
+    <div class="py-5 text-center">
+      <h1>DamSafe Dashboard</h1>
+      <p class="lead">Modbus devices are tracked below.</p>
+    </div>
+    <div class="py-3">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Device Name</th>
+            <th scope="col">IP</th>
+            <th scope="col">Status</th>
+            <th scope="col">Uptime</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">1</th>
+          </tr>
+          <tr>
+            <th scope="row">2</th>
+          </tr>
+          <tr>
+            <th scope="row">3</th>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="py-3">
+      <form action="" method="post">
+        <div class="form-row align-items-center">
+          <div class="col-auto">
+            <label class="sr-only" for="inlineFormInput">Device Name</label>
+            <input type="text" class="form-control mb-2" id="inlineFormInput" placeholder="Device Name" name="name">
+          </div>
+          <div class="col-auto">
+            <label class="sr-only" for="inlineFormInputGroup">IP Address</label>
+            <input type="text" class="form-control mb-2" id="inlineFormInput" placeholder="IP Address" name="ip">
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary mb-2">Add device</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+  <footer class="text-center">
+    <div class="text-center py-3 text-muted">
+      © 2020 Copyright Loki Security Enterprises
+    </div>
+</footer>
+{% endblock %}
