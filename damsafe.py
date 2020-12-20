@@ -63,8 +63,8 @@ def remove():
     return redirect(url_for('dashboard'))
 
 
-@app.route('/dashboard', methods=['GET'])
-def dashboard():
+@app.route('/data', methods=['GET'])
+def data():
     db = get_db()
     db_rows = db.execute('SELECT * FROM device').fetchall()
     g.device_rows = []
@@ -100,6 +100,11 @@ def dashboard():
         }
         g.device_rows.append(device_row)
 
+    return render_template('data.html')
+
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
     return render_template('dashboard.html')
 
 
