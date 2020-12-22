@@ -45,7 +45,7 @@ def add():
     if error is None:
         with FileLock('db.lock'):
             db.execute(
-                'INSERT INTO device (name, ip, coil, status, time, error) VALUES (?, ?, ?, NULL, NULL, NULL)',
+                'INSERT INTO device (name, ip, coil) VALUES (?, ?, ?)',
                 (name, ip, coil)
             )
             db.commit()
@@ -68,7 +68,13 @@ def remove():
 @app.route('/data', methods=['GET'])
 def data():
     db = get_db()
-    db_rows = db.execute('SELECT * FROM device').fetchall()
+    db_rows = db.execute('SELECT statid.*,ds.status AS status,ds.error AS error,dsup.time AS seen_time '
+                         'FROM (SELECT dev.id,dev.name,dev.ip,dev.coil,MAX(ds.time) AS status_time '
+                         'FROM device AS dev LEFT OUTER JOIN device_status AS ds ON ds.device_id = dev.id '
+                         'GROUP BY dev.id) AS statid LEFT OUTER JOIN device_status AS ds '
+                         'ON ds.device_id = statid.id AND ds.time = statid.status_time '
+                         'LEFT OUTER JOIN device_status AS dsup '
+                         'ON dsup.device_id = statid.id AND dsup.time = statid.status_time AND dsup.status = True').fetchall()
     g.device_rows = []
     for db_row in db_rows:
         if db_row['status'] is None:
@@ -77,18 +83,18 @@ def data():
             lastseen = '...'
         elif db_row['status'] == 1:
             status = 'up'
-            if db_row['time'] is None:
+            if db_row['seen_time'] is None:
                 uptime = 'just started'
             else:
-                uptime = str(datetime.now() - db_row['time']).split('.')[0]
+                uptime = str(datetime.utcnow() - db_row['seen_time']).split('.')[0]
             lastseen = 'now'
         else:
             status = 'down'
             uptime = 'n/a'
-            if db_row['time'] is None:
+            if db_row['seen_time'] is None:
                 lastseen = 'never'
             else:
-                lastseen = humanize.naturaldelta(datetime.now() - db_row['time'])
+                lastseen = humanize.naturaldelta(datetime.utcnow() - datetime.strptime(db_row['seen_time'], '%Y-%m-%d %H:%M:%S'))
 
         error = 'none' if db_row['error'] is None else db_row['error']
         device_row = {
@@ -108,6 +114,9 @@ def data():
     except FileNotFoundError:
         alive = False
     g.server_status = 'Alive' if alive else 'Dead'
+
+    statustime = db.execute('SELECT MAX(time) AS time FROM device_status').fetchone()['time']
+    g.last_status_check = 'Never' if statustime is None else humanize.naturaldelta(datetime.utcnow() - datetime.strptime(statustime, '%Y-%m-%d %H:%M:%S'))
 
     return render_template('data.html')
 
@@ -175,9 +184,9 @@ def server_command():
                 new_status = False
 
             with FileLock('db.lock'):
-                db.execute('UPDATE device SET status = ?, error = ? WHERE id = ?', (new_status, error, row['id']))
-                if (row['status'] is not None or new_status) and new_status != row['status']:
-                    db.execute('UPDATE device SET time = ? WHERE id = ?', (datetime.now(), row['id']))
+                db.execute('INSERT INTO device_status (device_id, time, status, error)'
+                           'VALUES (?, datetime("now"), ?, ?)',
+                           (row['id'], new_status, error))
                 db.commit()
 
         time.sleep(5)
