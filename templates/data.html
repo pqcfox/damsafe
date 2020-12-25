@@ -30,8 +30,8 @@
         <td class="py-3">{{ row['coil'] }}</td>
         <td class="py-3">{{ row['status'] }}</td>
         <td class="py-3">{{ row['error'] }}</td>
-        <td class="py-3">{{ row['uptime'] }}</td>
-        <td class="py-3">{{ row['lastseen'] }}</td>
+        <td class="py-3"><span title="{{row['uptime_hover']}}">{{ row['uptime'] }}</span></td>
+        <td class="py-3"><span title="{{row['lastseen_hover']}}">{{ row['lastseen'] }}</span></td>
         <td>
           <form action="{{ url_for('remove') }}" method="post">
             <button name="name" type="submit" value="{{ row['name'] }}" class="btn btn-primary">Remove</button>

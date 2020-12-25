@@ -94,6 +94,10 @@ def data():
     # for every database row, parse into plain english
     g.device_rows = []
     for db_row in db_rows:
+        # set hover texts to None
+        uptime_hover = 'no precise time'
+        lastseen_hover = 'no precise time'
+
         # if device not seen yet, wait
         if db_row['status'] is None:
             status = '...'
@@ -108,35 +112,49 @@ def data():
                 uptime = 'just started'
             # uptime is time last seen minus current time
             else:
-                lastdowntime = db.execute('SELECT MAX(time) AS time FROM device_status WHERE status = 0').fetchone()['time']
-                startofuptime = db.execute('SELECT time FROM device_status WHERE time > ?', (lastdowntime,)).fetchone()['time']
-                uptime = str(datetime.utcnow() - startofuptime).split('.')[0]
+                lastdowntime = db.execute('SELECT device.*,MAX(device_status.time) AS time FROM device '
+                                          'LEFT OUTER JOIN device_status ON device_status.device_id = device.id '
+                                          'WHERE device_status.status = false').fetchone()['time']
+                startofuptime = db.execute('SELECT device.*,MIN(device_status.time) AS time FROM device '
+                                           'LEFT OUTER JOIN device_status ON device_status.device_id = device.id '
+                                           'WHERE time > ?', (lastdowntime,)).fetchone()['time']
+                uptime = str(datetime.utcnow() - datetime.strptime(startofuptime, '%Y-%m-%d %H:%M:%S')).split('.')[0]
+                uptime_hover = 'UTC ' + startofuptime
             lastseen = 'now'
 
         # otherwise, say it's down
         else:
             status = 'down'
             uptime = 'n/a'
+            seentime = db.execute('SELECT device.*,MAX(device_status.time) AS time FROM device '
+                                  'LEFT OUTER JOIN device_status ON device_status.device_id = device.id '
+                                  'WHERE device_status.status = true').fetchone()['time']
+
             # if we've never seen it, say so
-            if db_row['seen_time'] is None:
+            if seentime is None:
+                print(db_row['seen_time'])
+                print(db_row.keys())
                 lastseen = 'never'
 
             # otherwise time since last seen is current time minus last seen time
             else:
-                lastseen = humanize.naturaldelta(datetime.utcnow() - datetime.strptime(db_row['seen_time'], '%Y-%m-%d %H:%M:%S'))
+                lastseen = humanize.naturaldelta(datetime.utcnow() - datetime.strptime(seentime, '%Y-%m-%d %H:%M:%S'))
+                lastseen_hover = 'UTC ' + seentime
 
         # if no error, say so--otherwise get the error text
         error = 'none' if db_row['error'] is None else db_row['error']
 
         # add the row to the table
         device_row = {
-            'name':     db_row['name'],
-            'ip':       db_row['ip'],
-            'coil':     db_row['coil'],
-            'error':    error,
-            'status':   status,
-            'uptime':   uptime,
-            'lastseen': lastseen
+            'name':             db_row['name'],
+            'ip':               db_row['ip'],
+            'coil':             db_row['coil'],
+            'error':            error,
+            'status':           status,
+            'uptime':           uptime,
+            'uptime_hover':     uptime_hover,
+            'lastseen':         lastseen,
+            'lastseen_hover':   lastseen_hover
         }
         g.device_rows.append(device_row)
 
