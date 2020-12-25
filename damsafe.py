@@ -108,7 +108,9 @@ def data():
                 uptime = 'just started'
             # uptime is time last seen minus current time
             else:
-                uptime = str(datetime.utcnow() - db_row['seen_time']).split('.')[0]
+                lastdowntime = db.execute('SELECT MAX(time) AS time FROM device_status WHERE status = 0').fetchone()['time']
+                startofuptime = db.execute('SELECT time FROM device_status WHERE time > ?', (lastdowntime,)).fetchone()['time']
+                uptime = str(datetime.utcnow() - startofuptime).split('.')[0]
             lastseen = 'now'
 
         # otherwise, say it's down
